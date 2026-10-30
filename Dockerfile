@@ -1,9 +1,20 @@
-FROM python:latest
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY . .
-RUN pip install -r requirements.txt
+RUN groupadd --system app \
+    && useradd --system --gid app --home-dir /app --no-create-home app
 
-EXPOSE 8000
-CMD gunicorn --bind 127.0.0.1:8000 app:app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY --chown=app:app app.py ./
+
+USER app
+
+EXPOSE 8002
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8002", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
