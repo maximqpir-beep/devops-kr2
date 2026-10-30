@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+__pycache__
+*.py[cod]
+.venv
+README.md
+nginx
+scripts
+variant.conf
+
