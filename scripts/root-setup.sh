@@ -9,8 +9,6 @@ fi
 VM_USER="${SUDO_USER:-devops}"
 VM_HOME="$(getent passwd "$VM_USER" | cut -d: -f6)"
 PROJECT_DIR="$VM_HOME/kr2"
-HOSTS_FILE=/etc/hosts
-HOSTS_BACKUP=/etc/hosts.kr2.before
 
 if [ ! -d "$PROJECT_DIR" ]; then
     printf 'Project directory not found: %s\n' "$PROJECT_DIR" >&2
@@ -21,26 +19,6 @@ fi
 # script never changes UFW rules.
 ufw status numbered > "$VM_HOME/ufw-before-kr2.txt"
 chown "$VM_USER:$VM_USER" "$VM_HOME/ufw-before-kr2.txt"
-
-# Docker Hub currently resolves to IPv6 first on this VM even though the VM
-# has no IPv6 default route. Keep the PR7 CDN entries and add only the two
-# missing Docker Hub names, using addresses resolved over IPv4 at run time.
-if ! grep -q '^# BEGIN KR2 DOCKER HUB IPV4$' "$HOSTS_FILE"; then
-    registry_ip="$(getent ahostsv4 registry-1.docker.io | awk 'NR==1 {print $1}')"
-    auth_ip="$(getent ahostsv4 auth.docker.io | awk 'NR==1 {print $1}')"
-    if [[ ! "$registry_ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] \
-        || [[ ! "$auth_ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
-        printf 'Could not resolve Docker Hub IPv4 addresses safely\n' >&2
-        exit 2
-    fi
-    cp -a "$HOSTS_FILE" "$HOSTS_BACKUP"
-    {
-        printf '\n# BEGIN KR2 DOCKER HUB IPV4\n'
-        printf '%s registry-1.docker.io\n' "$registry_ip"
-        printf '%s auth.docker.io\n' "$auth_ip"
-        printf '# END KR2 DOCKER HUB IPV4\n'
-    } >> "$HOSTS_FILE"
-fi
 
 cert_ok=false
 if [ -f /etc/ssl/certs/kr2.crt ] && [ -f /etc/ssl/private/kr2.key ]; then
